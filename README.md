@@ -56,3 +56,8 @@ The following flags are recognized:
 ## Platform specific notes:
 ### Windows
 On Windows, you need to run SynapseInstaller from the disk where both game files and config files are stored. Usually this should be your `C:\` drive. If this is not possible, you'll probably need to install Synapse by hand. Don't worry, it's not hard either! Check out the [installation guide](https://github.com/SynapseSL/Synapse/blob/master/README.md#installation and you'll be good to go in no time!
+
+## Honorable mentions
+[AlmightyLks](https://github.com/AlmightyLks) has approved this project. Partially because he's affiliated with it.
+Developed with <3 by [cubuzz](https://github.com/cubuzz).
+Part of the [Synapse Modloader Project](https://github.com/SynapseSL/Synapse).

@@ -16,3 +16,7 @@ Assembly-CSharp.dll
 # bundled is an intermediate directory that should only be added to releases.
 bundled/
 bundled-redist/
+
+# Compiled
+/src.exe
+/src
