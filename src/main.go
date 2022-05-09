@@ -16,14 +16,14 @@ import (
 )
 
 var flag_scripted = flag.Bool("scripted", false, "If enabled, no interaction will be required to install.")
-var flag_game_binaries_location = flag.String("binaries", "./SCPSL_DEDICATEDSERVER/", "Where are the game binaries located?")
+var flag_game_binaries_location = flag.String("binaries", "./scpsl_dedicatedserver/", "Where are the game binaries located?")
 var flag_game_files_location = flag.String("files", "~/.config/", "Where are your config files located?")
 var flag_install_game = flag.Bool("install-game", false, "Install/Update SCP: Secret Laboratory?")
 var flag_install_synapse = flag.Bool("install-synapse", false, "Install/Update Synapse?")
 var flag_verbosity = flag.Int("verbosity", 2, "How verbose should output be? Lower number = more verbose.")
 var flag_synapse_location = flag.String("synapsezip", "", "If you have already downloaded the Synapse.zip, where is it?")
-var flag_custom_unzip_cmd = flag.String("unzipcmd", "", "Want to use a custom unzip command? Input its command here.")
-var flag_custom_unzip_args = flag.String("unzipargs", "", "Custom Unzip Args")
+var flag_custom_unzip_cmd = flag.String("unzip-cmd", "", "Want to use a custom unzip command? Input its command here.")
+var flag_custom_unzip_args = flag.String("unzip-args", "", "Custom Unzip Args")
 
 func main() {
 	// Logger setup - a one time step we need to do.
@@ -56,7 +56,7 @@ func updateFlagPaths(pwd string) {
 			logger.Info("Detected OS: Windows. Adjusting path.")
 			if *flag_game_files_location == "~/.config/" {
 				logger.Info("Detected Linux Default Install Directory! Fixing path for Windows.")
-				*flag_game_files_location = os.Getenv("appdata") + "/Synapse/"
+				*flag_game_files_location = os.Getenv("appdata") + "/"
 			} else {
 				logger.Warn("Detected UNIX Home directive, but OS is Windows. We're fixing this up, but this might cause problems later on.")
 				*flag_game_files_location = strings.Replace(*flag_game_files_location, "~/", os.Getenv("UserProfile")+"/", 1)
@@ -95,6 +95,8 @@ func install_synapse() {
 		path = *flag_synapse_location
 	}
 
+	logger.Debug(path)
+
 	install_synapse_to(*flag_game_binaries_location, *flag_game_files_location, path, *flag_custom_unzip_cmd, *flag_custom_unzip_args)
 	logger.Ok("Installed Synapse.")
 }
@@ -112,7 +114,6 @@ func download_synapse() string {
 	logger.Info("Downloading Synapse...")
 	resp, err := http.Get("https://cdn.culabs.eu/synapseinstaller/Synapse.zip")
 	shouldIPanic(err, "Failed to download Synapse.zip from provider cdn.culabs.eu")
-	defer resp.Body.Close()
 
 	file, err := os.Create("Synapse.zip")
 	shouldIPanic(err, "Failed to create file for Synapse.zip")
@@ -121,11 +122,13 @@ func download_synapse() string {
 	shouldIPanic(err, "Failed to copy stream")
 	logger.Debug("Saved as " + file.Name())
 
+	resp.Body.Close()
+	shouldIPanic(file.Close(), "Failed to close Synapse.zip properly.")
 	return file.Name()
 }
 
 func install_synapse_to(binaries string, files string, path string, unzip_cmd string, unzip_args string) {
-	unzipSynapse(unzip_cmd, unzip_args)
+	unzipSynapse(path, unzip_cmd, unzip_args)
 
 	// Copy Assembly-CSharp.dll to where it should be.
 
@@ -142,12 +145,12 @@ func install_synapse_to(binaries string, files string, path string, unzip_cmd st
 	shouldIPanic(err, "Could not create Synapse directory")
 
 	// Create Synapse folders if they do not exist.
-	recursiveCopy("Synapse/", files)
+	recursiveCopy("Synapse", files+"/Synapse")
 
 	logger.Info("Synapse is now installed.")
 }
 
-func unzipSynapse(unzip_cmd string, unzip_args string) error {
+func unzipSynapse(path string, unzip_cmd string, unzip_args string) error {
 	var cmd string = ""
 	var args string = ""
 	if unzip_cmd == "" {
@@ -176,16 +179,28 @@ func unzipSynapse(unzip_cmd string, unzip_args string) error {
 		}
 	}
 
+	pwd, err := os.Getwd()
+	shouldIPanic(err, "Failed to determine working directory - this should not happen!")
+
 	if args == "" {
-		args = "Synapse.zip"
+		args = path
 	} else {
-		args += " Synapse.zip"
+		args += " " + path
 	}
 	largs := strings.Split(args, " ")
 	logger.Debug(fmt.Sprintf("Running %s %s ...", cmd, args))
 	e_unzip_cmd := exec.Command(cmd, largs...)
 	e_unzip_out, err := e_unzip_cmd.Output()
-	shouldIPanic(err, "Failed to unzip - your unzipper was presumably called with invalid arguments.")
+	if err != nil && runtime.GOOS == "windows" && unzip_cmd == "" {
+		logger.Warn("Failed to find 7za in your PATH. Falling back to bundled 7za.")
+		cmd = pwd + "/bundled/7za.exe"
+		logger.Debug(fmt.Sprintf("Running %s %s ...", cmd, args))
+		e_unzip_cmd := exec.Command(cmd, largs...)
+		e_unzip_out, err = e_unzip_cmd.Output()
+		shouldIPanic(err, fmt.Sprintf("Failed fallback: %s\n%s", err, e_unzip_out))
+	} else {
+		shouldIPanic(err, fmt.Sprintf("Failed to unzip: %s\n%s", err, e_unzip_out))
+	}
 
 	logger.Output(string(e_unzip_out))
 	return err
@@ -193,24 +208,26 @@ func unzipSynapse(unzip_cmd string, unzip_args string) error {
 
 func recursiveCopy(folder string, target string) {
 	logger.Info("Recursively copying " + folder + " ...")
-	items, err := ioutil.ReadDir(folder)
+	items, err := ioutil.ReadDir(folder + "/")
 	shouldIPanic(err, "Failed recursively copying.")
 	for i, item := range items {
 		if item.IsDir() {
 			logger.Debug(fmt.Sprintf("%d - Found directory %s", i, item.Name()))
 			createFolderIfNotExist(target + "/" + item.Name())
 			logger.Debug(fmt.Sprintf("%d - Created directory %s", i, target+item.Name()))
-			recursiveCopy(folder+item.Name(), target+item.Name())
+			recursiveCopy(folder+"/"+item.Name(), target+"/"+item.Name())
 		} else {
 			logger.Debug(fmt.Sprintf("%d - Found file %s", i, item.Name()))
-			os.Rename(folder+item.Name(), target+"/"+item.Name())
-			logger.Debug(fmt.Sprintf("%d - Moved file %s to %s", i, folder+item.Name(), target+"/"+item.Name()))
+			os.Rename(folder+"/"+item.Name(), target+"/"+item.Name())
+			logger.Debug(fmt.Sprintf("%d - Moved file %s to %s", i, folder+"/"+item.Name(), target+"/"+item.Name()))
 		}
 	}
 }
 
 func createFolderIfNotExist(path string) {
+	logger.Debug(fmt.Sprintf("Looking for %s", path))
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
+		logger.Debug(fmt.Sprintf("%s was not found. Creating...", path))
 		err := os.Mkdir(path, os.ModePerm)
 		shouldIPanic(err, "Failed to create Synapse folders")
 	}
@@ -219,18 +236,34 @@ func createFolderIfNotExist(path string) {
 func steamcmd_install_to(s string) {
 	logger.Debug("Calling SteamCMD with:")
 	logger.Debug("steamcmd +force_install_dir " + strings.Replace(s, " ", "\\ ", -1) + " +login anonymous +app_update 996560 validate +quit")
-	steamcmd_test_cmd := exec.Command("steamcmd", "+force_install_dir", strings.Replace(s, " ", "\\ ", -1), "+login", "anonymous", "+app_update", "996560", "validate", "+quit")
-	steamcmd_test_out, err := steamcmd_test_cmd.Output()
-	shouldIPanic(err, "Something went wrong calling SteamCMD (err: SteamcmdNotZero)!")
-	logger.Output(string(steamcmd_test_out))
+	steamcmd_cmd := exec.Command("steamcmd", "+force_install_dir", strings.Replace(s, " ", "\\ ", -1), "+login", "anonymous", "+app_update", "996560", "validate", "+quit")
+	steamcmd_out, err := steamcmd_cmd.Output()
+	if err != nil && runtime.GOOS == "windows" {
+		logger.Warn("Something went wrong calling SteamCMD. Falling back to bundled SteamCMD.")
+		steamcmd_cmd := exec.Command("./bundled/steamcmd.exe", "+force_install_dir", strings.Replace(s, " ", "\\ ", -1), "+login", "anonymous", "+app_update", "996560", "validate", "+quit")
+		steamcmd_out, err := steamcmd_cmd.Output()
+		shouldIPanic(err, fmt.Sprintf("Failed calling bundled SteamCMD: %s\n%s", err, steamcmd_out))
+		logger.Output(string(steamcmd_out))
+	} else {
+		shouldIPanic(err, fmt.Sprintf("Something went wrong calling SteamCMD: %s\n%s", err, steamcmd_out))
+		logger.Output(string(steamcmd_out))
+	}
 }
 
 func test_steamcmd() {
 	logger.Debug("Testing steamcmd availability...")
 	steamcmd_test_cmd := exec.Command("steamcmd", "+quit")
 	steamcmd_test_out, err := steamcmd_test_cmd.Output()
-	shouldIPanic(err, "Something went wrong calling SteamCMD (err: SteamcmdNotZero)!")
-	logger.Output(string(steamcmd_test_out))
+	if err != nil && runtime.GOOS == "windows" {
+		logger.Warn("Failed calling steamcmd, falling back to bundled SteamCMD.")
+		steamcmd_test_cmd := exec.Command("./bundled/steamcmd.exe", "+quit")
+		steamcmd_test_out, err := steamcmd_test_cmd.Output()
+		shouldIPanic(err, fmt.Sprintf("Failed calling bundled SteamCMD: %s\n%s", err, steamcmd_test_out))
+		logger.Output(string(steamcmd_test_out))
+	} else {
+		shouldIPanic(err, fmt.Sprintf("Something went wrong calling SteamCMD: %s\n%s", err, steamcmd_test_out))
+		logger.Output(string(steamcmd_test_out))
+	}
 }
 
 func shouldIPanic(err error, message string) {
@@ -239,9 +272,14 @@ func shouldIPanic(err error, message string) {
 	}
 }
 
+func isErrorHarmfulSteamcmd(err error) bool {
+	return true
+}
+
 func interactive() {
 	fmt.Println("SynapseInstaller 1.0.0b")
 	fmt.Println("============================")
 	fmt.Println("Running in interactive mode.")
 	fmt.Println("\nWelcome to the interactive SynapseSL installer.")
+	panic("Interactive not implemented o.o\nPlease use scripted mode for now!")
 }

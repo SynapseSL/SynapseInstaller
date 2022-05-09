@@ -1,5 +1,8 @@
+# VSCode
+.vscode/
+
 # This folder might get generated from tests as this is default install directory for SL.
-SCPSL_DEDICATEDSERVER/
+scpsl_dedicatedserver/
 
 # Synapse.zip gets downloaded automatically.
 Synapse.zip
@@ -9,3 +12,7 @@ Synapse/
 
 # Although this shouldn't exist, the Assembly-CSharp.dll *MIGHT* stick around from failed installs.
 Assembly-CSharp.dll
+
+# bundled is an intermediate directory that should only be added to releases.
+bundled/
+bundled-redist/
