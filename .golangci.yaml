@@ -1,0 +1,12 @@
+﻿run:
+  tests: false # We'll get there later.
+
+output:
+  format: line-number
+  unique-by-line: false
+  sort-results: true
+
+linters:
+  enable-all: true
+  # disable:
+    # - goanalysis_metalinter

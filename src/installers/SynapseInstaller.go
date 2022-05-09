@@ -13,8 +13,9 @@ import (
 	"git.culabs.eu/cubuzz/SynapseInstaller/src/utils"
 )
 
-func Download_Synapse() string {
+func DownloadSynapse() string {
 	logger.Info("Downloading Synapse...")
+
 	resp, err := http.Get("https://cdn.culabs.eu/synapseinstaller/Synapse.zip")
 	utils.ShouldIPanic(err, "Failed to download Synapse.zip from provider cdn.culabs.eu")
 
@@ -27,20 +28,25 @@ func Download_Synapse() string {
 
 	resp.Body.Close()
 	utils.ShouldIPanic(file.Close(), "Failed to close Synapse.zip properly.")
+
 	return file.Name()
 }
 
-func Install_Synapse_To(binaries string, files string, path string, unzip_cmd string, unzip_args string) {
-	unzipSynapse(path, unzip_cmd, unzip_args)
+func InstallSynapseTo(binaries string, files string, path string, unzipCmd string, unzipArgs string) {
+	unzipSynapse(path, unzipCmd, unzipArgs)
 
 	// Copy Assembly-CSharp.dll to where it should be.
 
-	var assemblycs string = binaries + "SCPSL_Data/Managed/Assembly-CSharp.dll"
+	assemblycs := binaries + "SCPSL_Data/Managed/Assembly-CSharp.dll"
+
 	logger.Info("Moving assemblies...")
+
 	err := os.Rename(assemblycs, assemblycs+".bak")
 	utils.ShouldIPanic(err, "Failed to rename file Assembly-CSharp.dll - your installation is likely corrupt")
+
 	err = os.Rename("Assembly-CSharp.dll", assemblycs)
 	utils.ShouldIPanic(err, "Failed to move Assembly-CSharp.dll to game directory")
+
 	logger.Info("Installed SynapseLoader.")
 
 	// Copy Synapse files.
@@ -53,32 +59,40 @@ func Install_Synapse_To(binaries string, files string, path string, unzip_cmd st
 	logger.Info("Synapse is now installed.")
 }
 
-func unzipSynapse(path string, unzip_cmd string, unzip_args string) {
-	var cmd string
-	var args string = ""
-	if unzip_cmd == "" {
+func unzipSynapse(path string, unzipCmd string, unzipArgs string) {
+	var (
+		cmd  string
+		args string
+	)
+
+	if unzipCmd == "" {
 		logger.Debug("Falling back to default zip command")
-		if runtime.GOOS == "windows" {
+
+		switch runtime.GOOS {
+		case win:
 			logger.Info("Detected OS: Windows. Using 7za for unzip.")
+
 			cmd = "7za"
 			args = "x -y"
-		} else if runtime.GOOS == "linux" {
+		case lnx:
 			logger.Info("Detected OS: Linux. Using unzip for unzip.")
+
 			cmd = "unzip"
 			args = "-o"
-		} else {
+		default:
 			logger.Warn("Your OS seems to be " + runtime.GOOS + ", but this is not natively supported by SynapseInstaller. Falling back to 7z, if that doesn't work please specify a custom unzip command.")
 			logger.Info("Detected OS: " + runtime.GOOS + ". Using 7za for unzip.")
+
 			cmd = "7za"
 			args = "x -y"
 		}
 	} else {
-		logger.Debug("Custom Unzip: " + unzip_cmd)
-		cmd = unzip_cmd
+		logger.Debug("Custom Unzip: " + unzipCmd)
+		cmd = unzipCmd
 
-		if unzip_args != "" {
-			logger.Debug("Custom args: " + unzip_args)
-			args = unzip_args
+		if unzipArgs != "" {
+			logger.Debug("Custom args: " + unzipArgs)
+			args = unzipArgs
 		}
 	}
 
@@ -90,20 +104,25 @@ func unzipSynapse(path string, unzip_cmd string, unzip_args string) {
 	} else {
 		args += " " + path
 	}
-	largs := strings.Split(args, " ")
+
 	logger.Debug(fmt.Sprintf("Running %s %s ...", cmd, args))
-	e_unzip_cmd := exec.Command(cmd, largs...)
-	e_unzip_out, err := e_unzip_cmd.Output()
-	if err != nil && runtime.GOOS == "windows" && unzip_cmd == "" {
+
+	largs := strings.Split(args, " ")
+	eUnzipCmd := exec.Command(cmd, largs...)
+	eUnzipOut, err := eUnzipCmd.Output()
+
+	if err != nil && runtime.GOOS == "windows" && unzipCmd == "" {
 		logger.Warn("Failed to find 7za in your PATH. Falling back to bundled 7za.")
+
 		cmd = pwd + "/bundled/7za.exe"
 		logger.Debug(fmt.Sprintf("Running %s %s ...", cmd, args))
-		e_unzip_cmd := exec.Command(cmd, largs...)
-		e_unzip_out, err = e_unzip_cmd.Output()
-		utils.ShouldIPanic(err, fmt.Sprintf("Failed fallback: %s\n%s", err, e_unzip_out))
+
+		eUnzipCmd := exec.Command(cmd, largs...)
+		eUnzipOut, err = eUnzipCmd.Output()
+		utils.ShouldIPanic(err, fmt.Sprintf("Failed fallback: %s\n%s", err, eUnzipOut))
 	} else {
-		utils.ShouldIPanic(err, fmt.Sprintf("Failed to unzip: %s\n%s", err, e_unzip_out))
+		utils.ShouldIPanic(err, fmt.Sprintf("Failed to unzip: %s\n%s", err, eUnzipOut))
 	}
 
-	logger.Output(string(e_unzip_out))
+	logger.Output(string(eUnzipOut))
 }

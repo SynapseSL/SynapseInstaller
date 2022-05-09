@@ -10,46 +10,55 @@ import (
 	"git.culabs.eu/cubuzz/SynapseInstaller/src/utils"
 )
 
-func Install_Game(game_binaries_location string) {
+func InstallGame(gameBinariesLocation string) {
 	logger.Info("Attempting to install game...")
-	test_steamcmd()
+	testSteamcmd()
 	logger.Debug("SteamCMD seems to work! Hooray!")
-	logger.Info("Installing SCPSL_DEDICATED to " + game_binaries_location + " ...")
-	steamcmd_install_to(game_binaries_location)
+	logger.Info("Installing SCPSL_DEDICATED to " + gameBinariesLocation + " ...")
+	steamcmdInstallTo(gameBinariesLocation)
 	logger.Ok("Installed SCP:SL.")
 }
 
-func test_steamcmd() {
+func testSteamcmd() {
 	logger.Debug("Testing steamcmd availability...")
-	steamcmd_test_cmd := exec.Command("steamcmd", "+quit")
-	steamcmd_test_out, err := steamcmd_test_cmd.Output()
-	if err != nil && runtime.GOOS == "windows" && utils.IsErrorHarmfulSteamcmd(err) {
+
+	steamcmdTestCmd := exec.Command("steamcmd", "+quit")
+	steamcmdTestOut, err := steamcmdTestCmd.Output()
+
+	if err != nil && runtime.GOOS == win && utils.IsErrorHarmfulSteamcmd(err) {
 		logger.Warn("Failed calling steamcmd, falling back to bundled SteamCMD.")
-		steamcmd_test_cmd := exec.Command("./bundled/steamcmd.exe", "+quit")
-		steamcmd_test_out, err := steamcmd_test_cmd.Output()
+
+		steamcmdTestCmd := exec.Command("./bundled/steamcmd.exe", "+quit")
+		steamcmdTestOut, err := steamcmdTestCmd.Output()
+
 		if utils.IsErrorHarmfulSteamcmd(err) {
-			utils.ShouldIPanic(err, fmt.Sprintf("Failed calling bundled SteamCMD: %s\n%s", err, steamcmd_test_out))
+			utils.ShouldIPanic(err, fmt.Sprintf("Failed calling bundled SteamCMD: %s\n%s", err, steamcmdTestOut))
 		}
-		logger.Output(string(steamcmd_test_out))
+
+		logger.Output(string(steamcmdTestOut))
 	} else {
-		utils.ShouldIPanic(err, fmt.Sprintf("Something went wrong calling SteamCMD: %s\n%s", err, steamcmd_test_out))
-		logger.Output(string(steamcmd_test_out))
+		utils.ShouldIPanic(err, fmt.Sprintf("Something went wrong calling SteamCMD: %s\n%s", err, steamcmdTestOut))
+		logger.Output(string(steamcmdTestOut))
 	}
 }
 
-func steamcmd_install_to(s string) {
+func steamcmdInstallTo(installDir string) {
+	installDir = strings.ReplaceAll(installDir, " ", "\\ ")
+
 	logger.Debug("Calling SteamCMD with:")
-	logger.Debug("steamcmd +force_install_dir " + strings.Replace(s, " ", "\\ ", -1) + " +login anonymous +app_update 996560 validate +quit")
-	steamcmd_cmd := exec.Command("steamcmd", "+force_install_dir", strings.Replace(s, " ", "\\ ", -1), "+login", "anonymous", "+app_update", "996560", "validate", "+quit")
-	steamcmd_out, err := steamcmd_cmd.Output()
-	if err != nil && runtime.GOOS == "windows" {
+	logger.Debug("steamcmd +force_install_dir " + installDir + " +login anonymous +app_update 996560 validate +quit")
+
+	steamcmdCmd := exec.Command("steamcmd", "+force_install_dir", installDir, "+login", "anonymous", "+app_update", "996560", "validate", "+quit")
+	steamcmdOut, err := steamcmdCmd.Output()
+
+	if err != nil && runtime.GOOS == win {
 		logger.Warn("Something went wrong calling SteamCMD. Falling back to bundled SteamCMD.")
-		steamcmd_cmd := exec.Command("./bundled/steamcmd.exe", "+force_install_dir", strings.Replace(s, " ", "\\ ", -1), "+login", "anonymous", "+app_update", "996560", "validate", "+quit")
-		steamcmd_out, err := steamcmd_cmd.Output()
-		utils.ShouldIPanic(err, fmt.Sprintf("Failed calling bundled SteamCMD: %s\n%s", err, steamcmd_out))
-		logger.Output(string(steamcmd_out))
+		steamcmdCmd := exec.Command("./bundled/steamcmd.exe", "+force_install_dir", installDir, "+login", "anonymous", "+app_update", "996560", "validate", "+quit")
+		steamcmdOut, err := steamcmdCmd.Output()
+		utils.ShouldIPanic(err, fmt.Sprintf("Failed calling bundled SteamCMD: %s\n%s", err, steamcmdOut))
+		logger.Output(string(steamcmdOut))
 	} else {
-		utils.ShouldIPanic(err, fmt.Sprintf("Something went wrong calling SteamCMD: %s\n%s", err, steamcmd_out))
-		logger.Output(string(steamcmd_out))
+		utils.ShouldIPanic(err, fmt.Sprintf("Something went wrong calling SteamCMD: %s\n%s", err, steamcmdOut))
+		logger.Output(string(steamcmdOut))
 	}
 }

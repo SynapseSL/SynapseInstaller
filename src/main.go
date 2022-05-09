@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -12,31 +11,32 @@ import (
 	"git.culabs.eu/cubuzz/SynapseInstaller/src/utils"
 )
 
+//nolint:gochecknoglobals,lll
 var (
-	flag_scripted               = flag.Bool("scripted", false, "If enabled, no interaction will be required to install.")
-	flag_game_binaries_location = flag.String("binaries", "./scpsl_dedicatedserver/", "Where are the game binaries located?")
-	flag_game_files_location    = flag.String("files", "~/.config/", "Where are your config files located?")
-	flag_install_game           = flag.Bool("install-game", false, "Install/Update SCP: Secret Laboratory?")
-	flag_install_synapse        = flag.Bool("install-synapse", false, "Install/Update Synapse?")
-	flag_verbosity              = flag.Int("verbosity", 2, "How verbose should output be? Lower number = more verbose.")
-	flag_synapse_location       = flag.String("synapsezip", "", "If you have already downloaded the Synapse.zip, where is it?")
-	flag_custom_unzip_cmd       = flag.String("unzip-cmd", "", "Want to use a custom unzip command? Input its command here.")
-	flag_custom_unzip_args      = flag.String("unzip-args", "", "Custom Unzip Args")
-	flag_noansi                 = flag.Bool("noansi", false, "Should ansi output be disabled? Recommended for Cmd/PowerShell and other shells without ansi suport.")
+	flagScripted             = flag.Bool("scripted", false, "If enabled, no interaction will be required to install.")
+	flagInstallSynapse       = flag.Bool("install-synapse", false, "Install/Update Synapse?")
+	flagInstallGame          = flag.Bool("install-game", false, "Install/Update SCP: Secret Laboratory?")
+	flagNoAnsi               = flag.Bool("noansi", false, "Should ansi output be disabled? Recommended for Cmd/PowerShell and other shells without ansi support.")
+	flagVerbosity            = flag.Int("verbosity", logger.LogLevelWARN, "How verbose should output be? Lower number = more verbose.")
+	flagGameBinariesLocation = flag.String("binaries", "./scpsl_dedicatedserver/", "Where are the game binaries located?")
+	flagGameFilesLocation    = flag.String("files", "~/.config/", "Where are your config files located?")
+	flagSynapseLocation      = flag.String("synapsezip", "", "If you have already downloaded the Synapse.zip, where is it?")
+	flagCustomUnzipCmd       = flag.String("unzip-cmd", "", "Want to use a custom unzip command? Input its command here.")
+	flagCustomUnzipArgs      = flag.String("unzip-args", "", "Custom Unzip Args")
 )
 
 func main() {
 	// Logger setup - a one time step we need to do.
 	flag.Parse()
-	logger.UsedLogger.SetLogLevel(*flag_verbosity)
-	logger.UsedLogger.SetAnsi(!(*flag_noansi))
+	logger.UsedLogger.SetLogLevel(*flagVerbosity)
+	logger.UsedLogger.SetAnsi(!(*flagNoAnsi))
 
 	pwd, err := os.Getwd()
 	utils.ShouldIPanic(err, "Could not figure out current working directory - this shouldn't happen! (GOOS_GETWD_ERR)")
 
 	updateFlagPaths(pwd)
 
-	if *flag_scripted {
+	if *flagScripted {
 		scripted()
 	} else {
 		interactive()
@@ -45,67 +45,79 @@ func main() {
 
 func scripted() {
 	logger.Info("Running in scripted mode.")
-	if *flag_install_game {
-		installers.Install_Game(*flag_game_binaries_location)
+
+	if *flagInstallGame {
+		installers.InstallGame(*flagGameBinariesLocation)
 	} else {
 		logger.Info("Skipped - Game was not installed.")
 	}
 
-	if *flag_install_synapse {
-		install_synapse()
+	if *flagInstallSynapse {
+		installSynapse()
 	} else {
 		logger.Info("Skipped - Synapse was not installed.")
 	}
 }
 
-func install_synapse() {
+func installSynapse() {
 	logger.Info("Attempting to install Synapse...")
 
 	var path string
-	if *flag_synapse_location == "" {
-		path = installers.Download_Synapse()
+	if *flagSynapseLocation == "" {
+		path = installers.DownloadSynapse()
 	} else {
-		path = *flag_synapse_location
+		path = *flagSynapseLocation
 	}
 
 	logger.Debug(path)
 
-	installers.Install_Synapse_To(*flag_game_binaries_location, *flag_game_files_location, path, *flag_custom_unzip_cmd, *flag_custom_unzip_args)
+	installers.InstallSynapseTo(
+		*flagGameBinariesLocation,
+		*flagGameFilesLocation,
+		path,
+		*flagCustomUnzipCmd,
+		*flagCustomUnzipArgs)
 	logger.Ok("Installed Synapse.")
 }
 
 func interactive() {
-	fmt.Println("SynapseInstaller 1.0.0b")
-	fmt.Println("============================")
-	fmt.Println("Running in interactive mode.")
-	fmt.Println("\nWelcome to the interactive SynapseSL installer.")
 	panic("Interactive not implemented o.o\nPlease use scripted mode for now!")
 }
 
 func updateFlagPaths(pwd string) {
-	if strings.HasPrefix(*flag_game_binaries_location, "./") {
-		*flag_game_binaries_location = strings.Replace(*flag_game_binaries_location, "./", pwd+"/", 1)
+	if strings.HasPrefix(*flagGameBinariesLocation, "./") {
+		*flagGameBinariesLocation = strings.Replace(*flagGameBinariesLocation, "./", pwd+"/", 1)
 	}
 
-	if strings.HasPrefix(*flag_game_files_location, "./") {
-		*flag_game_files_location = strings.Replace(*flag_game_files_location, "./", pwd+"/", 1)
+	if strings.HasPrefix(*flagGameFilesLocation, "./") {
+		*flagGameFilesLocation = strings.Replace(*flagGameFilesLocation, "./", pwd+"/", 1)
 	}
 
-	if strings.HasPrefix(*flag_game_files_location, "~/") {
-		if runtime.GOOS == "windows" {
+	if strings.HasPrefix(*flagGameFilesLocation, "~/") {
+		switch runtime.GOOS {
+		case "windows":
 			logger.Info("Detected OS: Windows. Adjusting path.")
-			if *flag_game_files_location == "~/.config/" {
+
+			if *flagGameFilesLocation == "~/.config/" {
 				logger.Info("Detected Linux Default Install Directory! Fixing path for Windows.")
-				*flag_game_files_location = os.Getenv("appdata") + "/"
+
+				*flagGameFilesLocation = os.Getenv("appdata") + "/"
 			} else {
-				logger.Warn("Detected UNIX Home directive, but OS is Windows. We're fixing this up, but this might cause problems later on.")
-				*flag_game_files_location = strings.Replace(*flag_game_files_location, "~/", os.Getenv("UserProfile")+"/", 1)
+				logger.Warn(
+					"Detected UNIX Home directive, but OS is Windows. " +
+						"We're fixing this up, but this might cause problems later on.")
+
+				*flagGameFilesLocation = strings.Replace(*flagGameFilesLocation, "~/", os.Getenv("UserProfile")+"/", 1)
 			}
-		} else if runtime.GOOS == "linux" {
+		case "linux":
 			logger.Info("Detected OS: Linux. Adjusting path.")
-			*flag_game_files_location = strings.Replace(*flag_game_files_location, "~/", os.Getenv("HOME")+"/", 1)
-		} else {
-			logger.Warn("Detected OS to be " + runtime.GOOS + ", but this is not natively supported by SynapseInstaller (Expected: Windows, Linux). Issues may arise.")
+
+			*flagGameFilesLocation = strings.Replace(*flagGameFilesLocation, "~/", os.Getenv("HOME")+"/", 1)
+		default:
+			logger.Warn(
+				"Detected OS to be " + runtime.GOOS +
+					", but this is not natively supported by SynapseInstaller (Expected: Windows, Linux). " +
+					"Issues may arise.")
 		}
 	}
 }
