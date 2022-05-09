@@ -52,3 +52,7 @@ The following flags are recognized:
         Log Level 3:  Error
         Log Level >3: Only fatal errors.
 ```
+
+## Platform specific notes:
+### Windows
+On Windows, you need to run SynapseInstaller from the disk where both game files and config files are stored. Usually this should be your `C:\` drive. If this is not possible, you'll probably need to install Synapse by hand. Don't worry, it's not hard either! Check out the [installation guide](https://github.com/SynapseSL/Synapse/blob/master/README.md#installation and you'll be good to go in no time!

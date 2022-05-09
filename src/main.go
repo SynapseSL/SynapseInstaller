@@ -24,11 +24,13 @@ var flag_verbosity = flag.Int("verbosity", 2, "How verbose should output be? Low
 var flag_synapse_location = flag.String("synapsezip", "", "If you have already downloaded the Synapse.zip, where is it?")
 var flag_custom_unzip_cmd = flag.String("unzip-cmd", "", "Want to use a custom unzip command? Input its command here.")
 var flag_custom_unzip_args = flag.String("unzip-args", "", "Custom Unzip Args")
+var flag_noansi = flag.Bool("noansi", false, "Should ansi output be disabled? Recommended for Cmd/PowerShell and other shells without ansi suport.")
 
 func main() {
 	// Logger setup - a one time step we need to do.
 	flag.Parse()
 	logger.UsedLogger.SetLogLevel(*flag_verbosity)
+	logger.UsedLogger.SetAnsi(!(*flag_noansi))
 
 	pwd, err := os.Getwd()
 	shouldIPanic(err, "Could not figure out current working directory - this shouldn't happen! (GOOS_GETWD_ERR)")
@@ -145,7 +147,7 @@ func install_synapse_to(binaries string, files string, path string, unzip_cmd st
 	shouldIPanic(err, "Could not create Synapse directory")
 
 	// Create Synapse folders if they do not exist.
-	recursiveCopy("Synapse", files+"/Synapse")
+	recursiveCopyAndDelete("Synapse", files+"/Synapse")
 
 	logger.Info("Synapse is now installed.")
 }
@@ -206,7 +208,7 @@ func unzipSynapse(path string, unzip_cmd string, unzip_args string) error {
 	return err
 }
 
-func recursiveCopy(folder string, target string) {
+func recursiveCopyAndDelete(folder string, target string) {
 	logger.Info("Recursively copying " + folder + " ...")
 	items, err := ioutil.ReadDir(folder + "/")
 	shouldIPanic(err, "Failed recursively copying.")
@@ -215,10 +217,13 @@ func recursiveCopy(folder string, target string) {
 			logger.Debug(fmt.Sprintf("%d - Found directory %s", i, item.Name()))
 			createFolderIfNotExist(target + "/" + item.Name())
 			logger.Debug(fmt.Sprintf("%d - Created directory %s", i, target+item.Name()))
-			recursiveCopy(folder+"/"+item.Name(), target+"/"+item.Name())
+			recursiveCopyAndDelete(folder+"/"+item.Name(), target+"/"+item.Name())
+			err = os.Remove(folder + "/" + item.Name())
+			shouldIPanic(err, fmt.Sprintf("Failed removing directory: %s", err))
 		} else {
 			logger.Debug(fmt.Sprintf("%d - Found file %s", i, item.Name()))
-			os.Rename(folder+"/"+item.Name(), target+"/"+item.Name())
+			err = os.Rename(folder+"/"+item.Name(), target+"/"+item.Name())
+			shouldIPanic(err, fmt.Sprintf("Failed to move file: %s", err))
 			logger.Debug(fmt.Sprintf("%d - Moved file %s to %s", i, folder+"/"+item.Name(), target+"/"+item.Name()))
 		}
 	}
@@ -254,11 +259,13 @@ func test_steamcmd() {
 	logger.Debug("Testing steamcmd availability...")
 	steamcmd_test_cmd := exec.Command("steamcmd", "+quit")
 	steamcmd_test_out, err := steamcmd_test_cmd.Output()
-	if err != nil && runtime.GOOS == "windows" {
+	if err != nil && runtime.GOOS == "windows" && isErrorHarmfulSteamcmd(err) {
 		logger.Warn("Failed calling steamcmd, falling back to bundled SteamCMD.")
 		steamcmd_test_cmd := exec.Command("./bundled/steamcmd.exe", "+quit")
 		steamcmd_test_out, err := steamcmd_test_cmd.Output()
-		shouldIPanic(err, fmt.Sprintf("Failed calling bundled SteamCMD: %s\n%s", err, steamcmd_test_out))
+		if isErrorHarmfulSteamcmd(err) {
+			shouldIPanic(err, fmt.Sprintf("Failed calling bundled SteamCMD: %s\n%s", err, steamcmd_test_out))
+		}
 		logger.Output(string(steamcmd_test_out))
 	} else {
 		shouldIPanic(err, fmt.Sprintf("Something went wrong calling SteamCMD: %s\n%s", err, steamcmd_test_out))
@@ -273,6 +280,9 @@ func shouldIPanic(err error, message string) {
 }
 
 func isErrorHarmfulSteamcmd(err error) bool {
+	if exitError, ok := err.(*exec.ExitError); ok {
+		return !(exitError.ExitCode() == 0 || exitError.ExitCode() == 7)
+	}
 	return true
 }
 

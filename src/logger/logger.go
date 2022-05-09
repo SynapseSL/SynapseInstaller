@@ -8,6 +8,7 @@ import (
 
 type Logger struct {
 	logLevel        int
+	ansiEnabled     bool
 	phosphor_dbg    func(string) string
 	phosphor_info   func(string) string
 	phosphor_output func(string) string
@@ -19,6 +20,7 @@ type Logger struct {
 
 var UsedLogger = Logger{
 	2, // Default to Warn and Above
+	true,
 	ansi.ColorFunc("white:17"),
 	ansi.ColorFunc("black:white"),
 	ansi.ColorFunc("white+b:232"),
@@ -40,42 +42,74 @@ func (log *Logger) SetLogLevel(newLogLevel int) {
 	log.logLevel = newLogLevel
 }
 
+func (log *Logger) SetAnsi(ansiEnabled bool) {
+	log.ansiEnabled = ansiEnabled
+}
+
 func Debug(message string) {
 	if UsedLogger.logLevel < 1 {
-		log.Println(UsedLogger.phosphor_dbg("[🔍 DEBUG]") + " " + message)
+		if UsedLogger.ansiEnabled {
+			log.Println(UsedLogger.phosphor_dbg("[🔍 DEBUG]") + " " + message)
+		} else {
+			log.Println("[DEBUG] " + message)
+		}
 	}
 }
 
 func Info(message string) {
 	if UsedLogger.logLevel < 2 {
-		log.Println(UsedLogger.phosphor_info("[🛈 INFO]") + " " + message)
+		if UsedLogger.ansiEnabled {
+			log.Println(UsedLogger.phosphor_info("[🛈 INFO]") + " " + message)
+		} else {
+			log.Println("[INFO] " + message)
+		}
 	}
 }
 
 func Output(message string) {
 	if UsedLogger.logLevel < 2 {
-		log.Println(UsedLogger.phosphor_output("[🚂 OUTPUT]") + " " + message)
+		if UsedLogger.ansiEnabled {
+			log.Println(UsedLogger.phosphor_output("[🚂 OUTPUT]") + " " + message)
+		} else {
+			log.Println("[OUTPUT] " + message)
+		}
 	}
 }
 
 func Ok(message string) {
 	if UsedLogger.logLevel < 3 {
-		log.Println(UsedLogger.phosphor_ok("[✅ OK]") + " " + message)
+		if UsedLogger.ansiEnabled {
+			log.Println(UsedLogger.phosphor_ok("[✅ OK]") + " " + message)
+		} else {
+			log.Println("[OK] " + message)
+		}
 	}
 }
 
 func Warn(message string) {
 	if UsedLogger.logLevel < 3 {
-		log.Println(UsedLogger.phosphor_warn("[⚠️ WARN]") + " " + message)
+		if UsedLogger.ansiEnabled {
+			log.Println("[WARN] " + message)
+		} else {
+
+		}
 	}
 }
 
 func Err(message string) {
 	if UsedLogger.logLevel < 4 {
-		log.Println(UsedLogger.phosphor_err("[🔥 ERROR]") + " " + message)
+		if UsedLogger.ansiEnabled {
+			log.Println(UsedLogger.phosphor_err("[🔥 ERROR]") + " " + message)
+		} else {
+			log.Println("[ERROR] " + message)
+		}
 	}
 }
 
 func Critical(message string) {
-	log.Fatalln(UsedLogger.phosphor_crit("[⚡ FATAL]") + " " + message)
+	if UsedLogger.ansiEnabled {
+		log.Fatalln(UsedLogger.phosphor_crit("[⚡ FATAL]") + " " + message)
+	} else {
+		log.Fatalln("[FATAL] " + message)
+	}
 }
