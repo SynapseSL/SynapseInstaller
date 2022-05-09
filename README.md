@@ -51,9 +51,13 @@ The following flags are recognized:
         Log Level 2:  Warn, OK
         Log Level 3:  Error
         Log Level >3: Only fatal errors.
+    -noansi
+        Disables ANSI escape codes and Unicode in output. Useful for older consoles that do not support it.
 ```
 
 ## Platform specific notes:
+### Linux
+SteamCMD and unzip should be in your path. SteamCMD is required for installing the game, and unzip is required for extracting Synapse and plugins. If unzip is not available to you, you can use the `-unzip-cmd` and `-unzip-args` switches.
 ### Windows
 On Windows, you need to run SynapseInstaller from the disk where both game files and config files are stored. Usually this should be your `C:\` drive. If this is not possible, you'll probably need to install Synapse by hand. Don't worry, it's not hard either! Check out the [installation guide](https://github.com/SynapseSL/Synapse/blob/master/README.md#installation and you'll be good to go in no time!
 
