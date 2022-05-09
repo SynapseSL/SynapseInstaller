@@ -19,4 +19,4 @@ bundled-redist/
 
 # Compiled
 /src.exe
-/src
+/src.bin
