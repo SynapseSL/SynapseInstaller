@@ -2,9 +2,10 @@
 A simple cli tool to install SCP:SL, the Synapse modloader, plugins and dependencies all from the same location.
 
 ## Installation
-Grab yourself a binary from the releases tab.
-Alternatively, you can build and install this yourself by running:
-`go install github.com/SynapseSL/SynapseInstaller@latest`
+Grab yourself a binary from the releases tab.  
+  
+Alternatively, you can build and install this yourself by running:  
+`go install github.com/SynapseSL/SynapseInstaller@latest`  
 Note: Building yourself requires Go installed on your machine.
 
 ### Dependencies
