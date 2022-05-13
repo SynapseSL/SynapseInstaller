@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"strings"
 
-	"git.culabs.eu/cubuzz/SynapseInstaller/src/logger"
-	"git.culabs.eu/cubuzz/SynapseInstaller/src/utils"
+	"github.com/SynapseSL/SynapseInstaller/src/logger"
+	"github.com/SynapseSL/SynapseInstaller/src/utils"
 )
 
 func DownloadSynapse() string {

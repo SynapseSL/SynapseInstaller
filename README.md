@@ -14,7 +14,8 @@ To extract Synapse and its plugins, a zip tool with cli support must be installe
 If you want to use a different cli tool to unpack the `.zip` files, you may use the `-unzip-cmd` and `-unzip-args` switches.
 
 ## Usage:
-To run SynapseInstaller interactively, just launch the executable. If you want to use SynapseInstaller from a script, you may do so by passing flags.
+To run SynapseInstaller interactively, just launch the executable. NOTE: Interactive mode is currently being worked on.
+If you want to use SynapseInstaller from a script, you may do so by passing flags.
 The following flags are recognized:
 
 ```

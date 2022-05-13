@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"git.culabs.eu/cubuzz/SynapseInstaller/src/logger"
+	"github.com/SynapseSL/SynapseInstaller/src/logger"
 )
 
 func ShouldIPanic(err error, message string) {

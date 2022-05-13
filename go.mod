@@ -1,4 +1,4 @@
-module git.culabs.eu/cubuzz/SynapseInstaller
+module github.com/SynapseSL/SynapseInstaller
 
 go 1.18
 
